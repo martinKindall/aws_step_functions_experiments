@@ -69,8 +69,8 @@ export class CdkStepFunctionOrdersStack extends Stack {
 
     this.sagaLambda = new lambda.Function(this, "SagaLambda", {
       runtime: this.lambdaRuntime,
-      handler: "com.codigomorsa.app.Order::OnEvent",
-      code: lambda.Code.fromAsset('./orders/build/libs/app-1.0-SNAPSHOT-all.jar'),
+      handler: "com.codigomorsa.orders.Order::OnEvent",
+      code: lambda.Code.fromAsset('./orders/build/libs/orders-1.0-SNAPSHOT-all.jar'),
       memorySize: this.lambdaMemory,
       timeout: this.lambdaTimeout
     });
