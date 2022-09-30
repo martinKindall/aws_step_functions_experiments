@@ -22,7 +22,8 @@ export class CdkStepFunctionOrdersStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    // this.sagaStepFunction();
+    this.initLambdas();
+    this.sagaStepFunction();
     this.backend();
   }
 
@@ -47,20 +48,20 @@ export class CdkStepFunctionOrdersStack extends Stack {
       resultPath: '$.CreateOrderError'
     });
 
-    const confirmOrder = new sfn_tasks.LambdaInvoke(this, 'ConfirmOrder', {
-      lambdaFunction: this.confirmOrderLambda,
-      resultPath: '$.ConfirmOrderResult'
-    }).addRetry({
-      maxAttempts: 2,
-      interval: Duration.minutes(1)
-    }).addCatch(cancelOrder, {
-      resultPath: '$.ConfirmOrderError'
-    });
+    // const confirmOrder = new sfn_tasks.LambdaInvoke(this, 'ConfirmOrder', {
+    //   lambdaFunction: this.confirmOrderLambda,
+    //   resultPath: '$.ConfirmOrderResult'
+    // }).addRetry({
+    //   maxAttempts: 2,
+    //   interval: Duration.minutes(1)
+    // }).addCatch(cancelOrder, {
+    //   resultPath: '$.ConfirmOrderError'
+    // });
 
     const definition = sfn.Chain
         .start(createOrder)
         .next(wait)
-        .next(confirmOrder)
+        // .next(confirmOrder)
         .next(orderSucceeded);
 
     this.saga = new sfn.StateMachine(this, 'OrderSaga', {
@@ -78,11 +79,30 @@ export class CdkStepFunctionOrdersStack extends Stack {
       timeout: this.lambdaTimeout
     });
 
-    // this.saga.grantExecution(this.sagaLambda);
+    this.saga.grantStartExecution(this.sagaLambda);
+    this.sagaLambda.addEnvironment("SFN_ARN", this.saga.stateMachineArn);
 
     new apigw.LambdaRestApi(this, "SagaLambdaApi", {
       handler: this.sagaLambda,
       endpointTypes: [EndpointType.REGIONAL]
+    });
+  }
+
+  private initLambdas() {
+    this.createOrderLambda = new lambda.Function(this, "CreateOrderLambda", {
+      runtime: this.lambdaRuntime,
+      handler: "com.codigomorsa.orders.CreateOrder::handleRequest",
+      code: lambda.Code.fromAsset('./orders/build/libs/orders-1.0-SNAPSHOT-all.jar'),
+      memorySize: this.lambdaMemory,
+      timeout: this.lambdaTimeout
+    });
+
+    this.cancelOrderLambda = new lambda.Function(this, "CancelOrderLambda", {
+      runtime: this.lambdaRuntime,
+      handler: "com.codigomorsa.orders.CancelOrder::handleRequest",
+      code: lambda.Code.fromAsset('./orders/build/libs/orders-1.0-SNAPSHOT-all.jar'),
+      memorySize: this.lambdaMemory,
+      timeout: this.lambdaTimeout
     });
   }
 }
