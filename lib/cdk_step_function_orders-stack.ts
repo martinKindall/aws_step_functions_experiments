@@ -4,6 +4,7 @@ import * as sfn_tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigw from 'aws-cdk-lib/aws-apigateway';
 import { Construct } from 'constructs';
+import {EndpointType} from "aws-cdk-lib/aws-apigateway";
 
 export class CdkStepFunctionOrdersStack extends Stack {
   private createOrderLambda: lambda.Function;
@@ -21,7 +22,7 @@ export class CdkStepFunctionOrdersStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    this.sagaStepFunction();
+    // this.sagaStepFunction();
     this.backend();
   }
 
@@ -66,21 +67,22 @@ export class CdkStepFunctionOrdersStack extends Stack {
       definition,
       timeout: Duration.minutes(5)
     });
+  }
 
+  private backend() {
     this.sagaLambda = new lambda.Function(this, "SagaLambda", {
       runtime: this.lambdaRuntime,
-      handler: "com.codigomorsa.orders.Order::OnEvent",
+      handler: "com.codigomorsa.orders.Order::handleRequest",
       code: lambda.Code.fromAsset('./orders/build/libs/orders-1.0-SNAPSHOT-all.jar'),
       memorySize: this.lambdaMemory,
       timeout: this.lambdaTimeout
     });
 
-    this.saga.grantExecution(this.sagaLambda);
-  }
+    // this.saga.grantExecution(this.sagaLambda);
 
-  private backend() {
     new apigw.LambdaRestApi(this, "SagaLambdaApi", {
-      handler: this.sagaLambda
+      handler: this.sagaLambda,
+      endpointTypes: [EndpointType.REGIONAL]
     });
   }
 }
