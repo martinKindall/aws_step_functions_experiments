@@ -48,20 +48,20 @@ export class CdkStepFunctionOrdersStack extends Stack {
       resultPath: '$.CreateOrderError'
     });
 
-    // const confirmOrder = new sfn_tasks.LambdaInvoke(this, 'ConfirmOrder', {
-    //   lambdaFunction: this.confirmOrderLambda,
-    //   resultPath: '$.ConfirmOrderResult'
-    // }).addRetry({
-    //   maxAttempts: 2,
-    //   interval: Duration.minutes(1)
-    // }).addCatch(cancelOrder, {
-    //   resultPath: '$.ConfirmOrderError'
-    // });
+    const confirmOrder = new sfn_tasks.LambdaInvoke(this, 'ConfirmOrder', {
+      lambdaFunction: this.confirmOrderLambda,
+      resultPath: '$.ConfirmOrderResult'
+    }).addRetry({
+      maxAttempts: 2,
+      interval: Duration.minutes(1)
+    }).addCatch(cancelOrder, {
+      resultPath: '$.ConfirmOrderError'
+    });
 
     const definition = sfn.Chain
         .start(createOrder)
         .next(wait)
-        // .next(confirmOrder)
+        .next(confirmOrder)
         .next(orderSucceeded);
 
     this.saga = new sfn.StateMachine(this, 'OrderSaga', {
@@ -100,6 +100,14 @@ export class CdkStepFunctionOrdersStack extends Stack {
     this.cancelOrderLambda = new lambda.Function(this, "CancelOrderLambda", {
       runtime: this.lambdaRuntime,
       handler: "com.codigomorsa.orders.CancelOrder::handleRequest",
+      code: lambda.Code.fromAsset('./orders/build/libs/orders-1.0-SNAPSHOT-all.jar'),
+      memorySize: this.lambdaMemory,
+      timeout: this.lambdaTimeout
+    });
+
+    this.confirmOrderLambda = new lambda.Function(this, "ConfirmOrderLambda", {
+      runtime: this.lambdaRuntime,
+      handler: "com.codigomorsa.orders.ConfirmOrder::handleRequest",
       code: lambda.Code.fromAsset('./orders/build/libs/orders-1.0-SNAPSHOT-all.jar'),
       memorySize: this.lambdaMemory,
       timeout: this.lambdaTimeout

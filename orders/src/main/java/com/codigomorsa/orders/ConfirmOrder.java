@@ -5,11 +5,15 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 
 import java.util.Map;
 
-public class CreateOrder implements RequestHandler<Map<String, Object>, Map<String, Object>> {
+public class ConfirmOrder implements RequestHandler<Map<String, Object>, Map<String, Object>> {
 
     @Override
     public Map<String, Object> handleRequest(Map<String, Object> event, Context context) {
-        System.out.println("CreateOrder, the event is: " + event);
+        System.out.println("ConfirmOrder");
+
+        if ((boolean) event.get("fail")) {
+            throw new IllegalArgumentException("Failing on purpouse");
+        }
 
         return Map.of("status", "ok");
     }
